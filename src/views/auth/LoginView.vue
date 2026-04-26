@@ -144,25 +144,30 @@ const onLogin = async () => {
       password: password.value,
     })
 
-    console.log('Response:', res.data) // keep this to debug
+    console.log('Response:', res.data)
 
-    // ✅ Backend returns { access, refresh } at root — no nested .data
-    const access  = res.data.access
-    const refresh = res.data.refresh
+    // ✅ tokens are inside res.data.data
+    const { access, refresh, ...userData } = res.data.data
 
-    // Save tokens
-    authStore.setToken(access)
+    console.log('access:', access)      // should now show the token
+    console.log('refresh:', refresh)    // should now show the token
+
+    // Save to localStorage
+    localStorage.setItem('access_token', access)
     localStorage.setItem('refresh_token', refresh)
-    localStorage.setItem('userData', JSON.stringify({ email: email.value }))
-    authStore.setUser({ email: email.value })
+    localStorage.setItem('userData', JSON.stringify(userData))
+
+    // Update store
+    authStore.setToken(access)
+    authStore.setUser(userData)
+
+    console.log('isAuthenticated:', authStore.isAuthenticated) // should be true
 
     router.push({ name: 'home' })
 
   } catch (err) {
     console.error('Login error:', err.response?.data)
-    errors.email = err?.response?.data?.detail || 
-                   err?.response?.data?.message || 
-                   'Invalid email or password.'
+    errors.email = err?.response?.data?.message || 'Invalid email or password.'
   } finally {
     loading.value = false
   }

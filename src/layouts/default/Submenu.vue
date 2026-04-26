@@ -72,7 +72,7 @@
           <v-divider></v-divider>
       </v-list>   
       
-      <v-list-item @click="triggerLogout" prepend-icon="mdi-power" title="Sign Out" value="sign-out"></v-list-item>
+      <v-list-item @click="triggerLogout()" prepend-icon="mdi-power" title="Sign Out" value="sign-out"></v-list-item>
       <v-divider></v-divider>
       
 
@@ -81,56 +81,14 @@
   
 </template>
 <script setup>
-import { useAuthStore } from "@/stores/authStore";
-// import { globalStore } from "@/stores/globalStore";
-import { onMounted } from "vue";
+import { useAuthStore } from "@/stores/authStore"
+import { useRouter } from "vue-router"
 
-const store = useAuthStore();
-// const g_Store = globalStore();
+const store  = useAuthStore()
+const router = useRouter()
 
 function triggerLogout() {
-  // if (store.isClockedIn() == true) {
-  //   g_Store.showLogoutModal();
-  // } else {
-  store.logout();
-  // }
+  store.logout()
+  router.push({ name: 'login' })  // ✅ removed the trailing slash
 }
-
-//
-
-// onMounted(() => {
-//   g_Store.fetchMakes();
-//   g_Store.fetchSpareWheels();
-//   g_Store.fetchRegions();
-//   g_Store.fetchWheels();
-//   g_Store.fetchRoutes();
-//   g_Store.fetchTrailerTypes();
-//   g_Store.fetchTrailerAxles();
-//   g_Store.fetchTrailerNumberofWheels();
-//   g_Store.fetchTrailerNumberofWheelsPerAxle();
-//   g_Store.fetchTrailerSpareWheels();
-//   g_Store.fetchassignTrailers();
-//   g_Store.fetchUnassignTrailers();
-//   g_Store.fetchVehicles();
-//   g_Store.isAdmin();
-//   g_Store.isSuperAdmin();
-//   g_Store.fetchBrands();
-//   g_Store.fetchSize();
-//   g_Store.fetchPattern();
-//   g_Store.fetchTyres();
-//   g_Store.fetchTyrePurchase();
-//   g_Store.fetchTyrePurchaseFitted();
-//   g_Store.fetchWheelPosition();
-//   g_Store.fetchVehicleTrailer();
-//   g_Store.fetchSendForRetreads();
-//   g_Store.fetchTreadDepth();
-//   g_Store.fetchScrapReasons();
-//   g_Store.fetchDisposedScrappedTyres();
-//   g_Store.fetchReturnFromRetread();
-//   g_Store.fetchTyreFitments();
-//   g_Store.fetchRubbers();
-//   g_Store.sendNewForRetread();
-//   g_Store.fetchMyTrailers();
-//   g_Store.fetchMyVehicles();
-// });
 </script>
