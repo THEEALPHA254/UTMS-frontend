@@ -91,4 +91,6 @@ function triggerLogout() {
   store.logout()
   router.push({ name: 'login' })  // ✅ removed the trailing slash
 }
+
+
 </script>
