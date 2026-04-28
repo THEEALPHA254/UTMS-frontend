@@ -50,7 +50,7 @@
         <!-- Form -->
         <Form @submit="handleSubmit" :initial-values="formValues">
           <v-card-text class="pa-5">
-            <v-row dense>
+            <v-row density="comfortable">
               <v-col
                 v-for="field in props.fields"
                 :key="field.value"
