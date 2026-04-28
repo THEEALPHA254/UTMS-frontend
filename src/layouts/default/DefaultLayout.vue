@@ -5,8 +5,13 @@
       color="background"
       permanent
     >
-      <v-list-item title="UTMS Frontend" subtitle="Project Navigation" />
-      <v-divider class="my-2" />
+    <template v-slot:prepend>
+        <div class="mt-2 d-flex align-center justify-center">
+          <v-img inline src="../../assets/logo-405.png" :width="80" style="border-radius: 50px"></v-img>
+        </div>
+      </template>
+
+      <v-divider class="my-5" />
       <Submenu />
     </v-navigation-drawer>
 

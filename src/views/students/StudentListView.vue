@@ -1,3 +1,4 @@
+<!-- students.vue -->
 <template>
   <div>
     <!-- Page Header -->
@@ -121,7 +122,7 @@
             size="small"
             variant="tonal"
           >
-            {{ item.transport_status || '—' }}
+            {{ item.student_profile?.transport_status || '—' }}
           </v-chip>
         </template>
 
@@ -189,6 +190,7 @@
 import { ref, onMounted } from 'vue'
 import CrudModal from '@/components/CRUD.vue'
 import axiosInst from '@/services/api'
+import { toast } from 'vue3-toastify'
 
 // ── Table state ────────────────────────────────────────────
 const students    = ref([])
@@ -218,47 +220,25 @@ const accountStatuses   = [
 
 // ── Table headers ──────────────────────────────────────────
 const headers = [
-  { title: 'Student',      key: 'name', sortable: false },
+  { title: 'Student', key: 'name', sortable: false },
   { title: 'Admission No', key: 'admission_number' },
-  { title: 'Faculty',      key: 'faculty' },
-  { title: 'Transport',    key: 'transport_status' },
-  { title: 'Wallet',       key: 'wallet_balance' },
-  { title: 'Actions',      key: 'actions', sortable: false, align: 'end' },
+  { title: 'Faculty', key: 'faculty' },
+  { title: 'Transport', key: 'transport_status' },
+  { title: 'Wallet', key: 'wallet_balance' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]
 
 // ── Student form fields passed to GlobalCrudModal ──────────
 // Each field: { value, text, type, required, cols?, select_list? }
 const studentFields = [
-  { value: 'first_name',  text: 'First Name',      type: 'text',   required: true },
-  { value: 'last_name',   text: 'Last Name',        type: 'text',   required: true },
-  { value: 'email',       text: 'Email',            type: 'email',  required: true,  cols: 12 },
-  { value: 'phone',       text: 'Phone Number',     type: 'text',   required: false },
-  {
-    value: 'admission_number',
-    text: 'Admission No',
-    type: 'text',
-    required: true,
-  },
-  {
-    value: 'student_id',
-    text: 'Stuedent Id',
-    type: 'text',
-    required: true,
-  },
-  {
-    value: 'faculty',
-    text: 'Faculty',
-    type: 'text',
-    required: false,
-  },
-  {
-    value: 'transport_status',
-    text: 'Transport Status',
-    type: 'select',
-    required: true,
-    cols: 12,
-    select_list: transportStatuses,
-  },
+  { value: 'first_name',  text: 'First Name', type: 'text',   required: true },
+  { value: 'last_name', text: 'Last Name', type: 'text',   required: true },
+  { value: 'email', text: 'Email', type: 'email',  required: true,  cols: 12 },
+  // { value: 'phone', text: 'Phone Number', type: 'text',   required: false },
+  { value: 'admission_number', text: 'Admission No', type: 'text', required: true, },
+  { value: 'student_id', text: 'Student Id', type: 'text', required: true, },
+  { value: 'faculty', text: 'Faculty', type: 'text', required: false,},
+  {value: 'transport_status', text: 'Transport Status', type: 'select', required: true, cols: 12, select_list: transportStatuses,},
 ]
 
 // ── Helpers ────────────────────────────────────────────────
@@ -270,9 +250,13 @@ function showSnack(text, color = 'success') {
   snack.value = { show: true, text, color }
 }
 
+const editingProfileId = ref(null)
 // ── Open edit via crudModal ref ────────────────────────────
 function openEdit(item) {
+  editingProfileId.value = item.profile_id
+  console.log(item.profile_id)
   crudModal.value?.openEdit(item)
+  
 }
 
 
@@ -293,10 +277,12 @@ async function fetchStudents() {
     // ✅ Map to flatten user fields onto each student object
     students.value = (data.results || []).map(student => ({
       ...student,
-      first_name: student.user?.first_name || '',
-      last_name:  student.user?.last_name  || '',
-      // email:      student.user?.email      || '',
-      is_active:  student.user?.is_active  ?? true,
+      first_name: student.first_name || '',
+      last_name:  student.last_name  || '',
+      admission_number: student.student_profile?.admission_number || '',
+      faculty: student.student_profile?.faculty || '',
+      profile_id: student.student_profile?.id,
+      is_active: student.is_active,
     }))
 
     total.value = data.count || students.value.length
@@ -332,13 +318,14 @@ async function onAddStudent({ data, callback }) {
 
 // ── Edit Student ───────────────────────────────────────────
 async function onEditStudent({ data, id, callback }) {
+
   try {
-    await axiosInst.patch(`/students/${id}/`, data)
-    showSnack('Student updated successfully.')
+    await axiosInst.put(`/auth/students/${editingProfileId.value}/`, data)
+    toast.success('Student updated successfully.')
     fetchStudents()
     callback()
   } catch (e) {
-    showSnack(e?.response?.data?.detail || 'Failed to update student.', 'error')
+    toast.error(e?.response?.data?.detail || 'Failed to update student.')
     callback()
   }
 }

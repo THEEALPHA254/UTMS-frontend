@@ -8,8 +8,8 @@
 
         <!-- Brand -->
         <div class="auth-brand">
-          <span class="auth-brand-dot"></span>
-          <span class="auth-brand-name">SchoolBus</span>
+          <!-- <span class="auth-brand-dot"></span> -->
+          <span class="auth-brand-name">UNIVERSITY TRANSPORT MANAGEMENT SYSTEM</span>
         </div>
 
         <!-- Form Body -->
@@ -80,25 +80,25 @@
           </v-btn>
 
           <!-- Sign up link -->
-          <p class="text-center text-muted" style="font-size: var(--text-sm);">
+          <!-- <p class="text-center text-muted" style="font-size: var(--text-sm);">
             Don't have an account?
             <a href="#" class="link-primary">Sign up</a>
-          </p>
+          </p> -->
         </div>
 
         <!-- Footer -->
-        <p class="auth-footer-copy">© SchoolBus 2027</p>
+        <p class="auth-footer-copy">© UTMS-University Transport Management System 2027</p>
       </v-card>
 
       <!-- ── Right: Visual Panel ── -->
       <div class="auth-panel-visual">
-        <div class="auth-orb"></div>
-        <div class="auth-orb-shadow"></div>
+        <!-- <div class="auth-orb"></div>
+        <div class="auth-orb-shadow"></div> -->
 
         <!-- Arrow nav -->
-        <div class="auth-nav-arrow">
+        <!-- <div class="auth-nav-arrow">
           <v-icon size="18" color="grey-darken-1">mdi-chevron-right</v-icon>
-        </div>
+        </div> -->
       </div>
 
     </div>
@@ -110,6 +110,9 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import axiosInst from '@/services/api'
+import { useGlobalStore } from '@/stores/globalstore'  // add this import
+
+const globalStore = useGlobalStore()  // add this
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -149,9 +152,6 @@ const onLogin = async () => {
     // ✅ tokens are inside res.data.data
     const { access, refresh, ...userData } = res.data.data
 
-    console.log('access:', access)      // should now show the token
-    console.log('refresh:', refresh)    // should now show the token
-
     // Save to localStorage
     localStorage.setItem('access_token', access)
     localStorage.setItem('refresh_token', refresh)
@@ -160,6 +160,7 @@ const onLogin = async () => {
     // Update store
     authStore.setToken(access)
     authStore.setUser(userData)
+    globalStore.setUser(userData) 
 
     console.log('isAuthenticated:', authStore.isAuthenticated) // should be true
 
