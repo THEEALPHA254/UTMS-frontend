@@ -128,7 +128,7 @@
 
         <!-- Wallet -->
         <template #item.wallet_balance="{ item }">
-          KES {{ Number(item.wallet_balance || 0).toLocaleString() }}
+          KES {{ (item.student_profile?.wallet_balance ?? 0).toLocaleString() }}
         </template>
 
         <!-- Actions -->

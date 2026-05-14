@@ -64,10 +64,13 @@
   async function fetch() {
     loading.value = true
     try {
-      const { data } = await axiosInst.all({
-        page: page.value, page_size: perPage.value,
-        payment_method: filterMethod.value || undefined,
-        status: filterStatus.value || undefined,
+      const { data } = await axiosInst.get('/payments/all/', {
+        params: {
+          page: page.value,
+          page_size: perPage.value,
+          payment_method: filterMethod.value || undefined,
+          status: filterStatus.value || undefined,
+        },
       })
       transactions.value = data.results || data
       total.value = data.count || transactions.value.length

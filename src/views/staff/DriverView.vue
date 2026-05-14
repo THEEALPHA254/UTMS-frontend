@@ -215,6 +215,23 @@ const driverFields = [
   { value: 'phone_number',   text: 'Phone Number',   type: 'text',  required: false, cols: 12 },
   { value: 'license_number', text: 'License Number', type: 'text',  required: true  },
   { value: 'license_expiry', text: 'License Expiry', type: 'date',  required: true  },
+  {
+    value: 'bus',
+    text: 'Assigned Bus (optional)',
+    type: 'select',
+    required: false,
+    cols: 12,
+    select_list: [],
+    itemId: 'value',
+    itemTitle: 'title',
+    loadOptions: async () => {
+      const { data } = await axiosInst.get('/transport/buses/', { params: { status: 'active' } })
+      return (data.results || data).map(b => ({
+        title: `${b.bus_number} — ${b.plate_number}`,
+        value: b.id,
+      }))
+    },
+  },
 ]
 
 // ── Fetch ──────────────────────────────────────────────────
@@ -278,6 +295,7 @@ async function onAddDriver({ data, callback }) {
       phone_number:   data.phone_number,
       license_number: data.license_number,
       license_expiry: data.license_expiry,
+      bus:            data.bus || null,
     }
     await axiosInst.post('/auth/drivers/create/', payload)
     toast.success('Driver created. Credentials sent by email.')
@@ -297,6 +315,7 @@ async function onEditDriver({ data, callback }) {
       last_name:      data.last_name,
       phone_number:   data.phone_number,
       license_expiry: data.license_expiry,
+      bus:            data.bus || null,
     }
     await axiosInst.put(`/auth/drivers/${editingProfileId.value}/`, payload)
     toast.success('Driver updated successfully.')

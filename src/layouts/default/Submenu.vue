@@ -54,9 +54,27 @@
       </v-list>
 
       <v-list>
+        <v-list-item title="Buses" :to="{ name: 'buses' }" value="buses" rounded="lg">
+          <template v-slot:prepend>
+            <v-icon class="mr-n3" icon="mdi-bus" />
+          </template>
+        </v-list-item>
+        <v-divider />
+      </v-list>
+
+      <v-list>
         <v-list-item title="Routes" :to="{ name: 'routes' }" value="routes" rounded="lg">
           <template v-slot:prepend>
             <v-icon class="mr-n3" icon="mdi-map-marker-path"  />
+          </template>
+        </v-list-item>
+        <v-divider />
+      </v-list>
+
+      <v-list>
+        <v-list-item title="Schedules" :to="{ name: 'schedules' }" value="schedules" rounded="lg">
+          <template v-slot:prepend>
+            <v-icon class="mr-n3" icon="mdi-calendar-clock" />
           </template>
         </v-list-item>
         <v-divider />
