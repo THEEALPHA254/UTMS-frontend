@@ -118,7 +118,7 @@
         <!-- Transport Status chip -->
         <template #item.transport_status="{ item }">
           <v-chip
-            :color="tsColor(item.GlobalComponentstransport_status)"
+            :color="tsColor(item.student_profile?.transport_status)"
             size="small"
             variant="tonal"
           >
@@ -340,7 +340,7 @@ function openStatusDialog(student) {
 async function saveStatus() {
   saving.value = true
   try {
-    await axiosInst.patch(`/student-profiles/${selectedStudent.value.student_profile.id}/`, {
+    await axiosInst.put(`/auth/students/${selectedStudent.value.student_profile.id}/`, {
       transport_status: newStatus.value,
     })
     showSnack('Status updated.')
@@ -354,7 +354,8 @@ async function saveStatus() {
 }
 
 async function exportCSV() {
-  window.open('/api/reports/students/usage/?export=csv', '_blank')
+  const apiBase = import.meta.env.VITE_BASE_API_URL || 'http://127.0.0.1:8000/api'
+  window.open(`${apiBase}/reports/students/`, '_blank')
 }
 
 onMounted(fetchStudents)
