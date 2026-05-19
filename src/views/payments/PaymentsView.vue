@@ -61,6 +61,7 @@
     { title: 'Date', key: 'created_at' },
   ]
   
+  
   async function fetch() {
     loading.value = true
     try {
@@ -78,6 +79,9 @@
   }
   
   function onOptions({ page: p, itemsPerPage: pp }) { page.value = p; perPage.value = pp; fetch() }
-  function exportCSV() { window.open('/api/reports/payments/?export=csv', '_blank') }
+  function exportCSV() {
+    const apiBase = import.meta.env.VITE_BASE_API_URL || 'http://127.0.0.1:8000/api'
+    window.open(`${apiBase}/payments/all/?export=csv`, '_blank')
+  }
   onMounted(fetch)
   </script>

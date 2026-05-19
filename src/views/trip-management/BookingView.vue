@@ -123,10 +123,13 @@
   async function fetchBookings() {
     loading.value = true
     try {
-      const { data } = await axiosInst.allBookings({
-        page: page.value, page_size: perPage.value,
-        search: search.value || undefined,
-        status: filterStatus.value || undefined,
+      const { data } = await axiosInst.get('/transport/bookings/all/', {
+        params: {
+          page: page.value,
+          page_size: perPage.value,
+          search: search.value || undefined,
+          status: filterStatus.value || undefined,
+        },
       })
       bookings.value = data.results || data
       total.value = data.count || bookings.value.length
@@ -142,7 +145,7 @@
     boarding.value = true
     boardResult.value = null
     try {
-      const { data } = await axiosInst.markBoarded(qrInput.value.trim())
+      const { data } = await axiosInst.post('/transport/bookings/board/', { qr_code: qrInput.value.trim() })
       boardResult.value = { type: 'success', message: `✓ ${data.message} — ${data.student}` }
       qrInput.value = ''
       fetchBookings()
