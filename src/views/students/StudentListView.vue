@@ -39,8 +39,8 @@
     <v-card>
       <!-- Filters -->
       <v-card-text class="pb-0">
-        <v-row dense>
-          <v-col cols="12" md="5">
+        <v-row dense align="center">
+          <v-col cols="12" md="4">
             <v-text-field
               v-model="search"
               placeholder="Search...."
@@ -54,7 +54,7 @@
               @update:model-value="fetchStudents"
             />
           </v-col>
-          <v-col cols="6" md="4">
+          <v-col cols="6" md="3">
             <v-select
               v-model="filterStatus"
               :items="transportStatuses"
@@ -80,6 +80,18 @@
               class="app-field"
               @update:model-value="fetchStudents"
             />
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex justify-end">
+            <v-btn
+              variant="tonal"
+              color="grey"
+              size="small"
+              prepend-icon="mdi-filter-off"
+              rounded="lg"
+              @click="resetFilters"
+            >
+              Reset
+            </v-btn>
           </v-col>
         </v-row>
       </v-card-text>
@@ -138,7 +150,7 @@
             <v-icon>mdi-pencil-outline</v-icon>
           </v-btn>
           <!-- View detail -->
-          <v-btn icon size="small" variant="text" :to="`/students/${item.id}`">
+          <v-btn icon size="small" variant="text" :to="`/students/${item.profile_id}`">
             <v-icon>mdi-eye-outline</v-icon>
           </v-btn>
         </template>
@@ -234,9 +246,8 @@ const studentFields = [
   { value: 'first_name',  text: 'First Name', type: 'text',   required: true },
   { value: 'last_name', text: 'Last Name', type: 'text',   required: true },
   { value: 'email', text: 'Email', type: 'email',  required: true,  cols: 12 },
-  // { value: 'phone', text: 'Phone Number', type: 'text',   required: false },
+  { value: 'phone_number', text: 'Phone Number', type: 'text',   required: false },
   { value: 'admission_number', text: 'Admission No', type: 'text', required: true, },
-  { value: 'student_id', text: 'Student Id', type: 'text', required: true, },
   { value: 'faculty', text: 'Faculty', type: 'text', required: false,},
   {value: 'transport_status', text: 'Transport Status', type: 'select', required: true, cols: 12, select_list: transportStatuses,},
 ]
@@ -277,12 +288,13 @@ async function fetchStudents() {
     // ✅ Map to flatten user fields onto each student object
     students.value = (data.results || []).map(student => ({
       ...student,
-      first_name: student.first_name || '',
-      last_name:  student.last_name  || '',
+      first_name:       student.first_name || '',
+      last_name:        student.last_name  || '',
       admission_number: student.student_profile?.admission_number || '',
-      faculty: student.student_profile?.faculty || '',
-      profile_id: student.student_profile?.id,
-      is_active: student.is_active,
+      faculty:          student.student_profile?.faculty          || '',
+      transport_status: student.student_profile?.transport_status || '',
+      profile_id:       student.student_profile?.id,
+      is_active:        student.is_active,
     }))
 
     total.value = data.count || students.value.length
@@ -354,8 +366,54 @@ async function saveStatus() {
 }
 
 async function exportCSV() {
-  const apiBase = import.meta.env.VITE_BASE_API_URL || 'http://127.0.0.1:8000/api'
-  window.open(`${apiBase}/reports/students/`, '_blank')
+  loading.value = true
+  try {
+    // Fetch ALL matching students (no pagination) for export
+    const { data } = await axiosInst.get('/auth/students/', {
+      params: {
+        page_size:        1000,
+        search:           search.value || undefined,
+        transport_status: filterStatus.value || undefined,
+        is_active:        filterActive.value === '' ? undefined : filterActive.value,
+      },
+    })
+    const rows = data.results || []
+    const headers = ['Admission No', 'First Name', 'Last Name', 'Email', 'Phone', 'Faculty', 'Transport Status', 'Wallet Balance (KES)', 'Account Status', 'Date Joined']
+    const csvLines = [
+      headers.join(','),
+      ...rows.map(s => [
+        s.student_profile?.admission_number || '',
+        s.first_name || '',
+        s.last_name || '',
+        s.email || '',
+        s.phone_number || '',
+        s.student_profile?.faculty || '',
+        s.student_profile?.transport_status || '',
+        s.student_profile?.wallet_balance ?? 0,
+        s.is_active ? 'Active' : 'Inactive',
+        s.date_joined ? new Date(s.date_joined).toLocaleDateString() : '',
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    ]
+    const blob = new Blob([csvLines.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'students.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    showSnack('Export failed.', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+function resetFilters() {
+  search.value = ''
+  filterStatus.value = ''
+  filterActive.value = ''
+  page.value = 1
+  fetchStudents()
 }
 
 onMounted(fetchStudents)

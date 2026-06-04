@@ -98,14 +98,23 @@
         <v-divider />
       </v-list>
 
-      <v-list>
-        <v-list-item title="Reports" :to="{ name: 'reports' }" value="reports" rounded="lg">
-          <template v-slot:prepend>
-            <v-icon class="mr-n3" icon="mdi-chart-box-multiple"  />
-          </template>
-        </v-list-item>
-        <v-divider />
-      </v-list>
+      <!-- Reports — expandable group -->
+      <v-list-group value="reports">
+        <template v-slot:activator="{ props }">
+          <v-list-item v-bind="props" rounded="lg">
+            <template v-slot:prepend>
+              <v-icon class="mr-n3" icon="mdi-chart-box-multiple" />
+            </template>
+            <v-list-item-title>Reports</v-list-item-title>
+          </v-list-item>
+        </template>
+        <v-list-item title="Custom Reports"     :to="{ name: 'reports-custom' }"           value="reports-custom"           rounded="lg" prepend-icon="mdi-file-chart-outline" />
+        <v-list-item title="Monthly Trips"      :to="{ name: 'reports-monthly-trips' }"    value="reports-monthly-trips"    rounded="lg" prepend-icon="mdi-calendar-month" />
+        <v-list-item title="Bookings"           :to="{ name: 'reports-bookings' }"         value="reports-bookings"         rounded="lg" prepend-icon="mdi-ticket-confirmation" />
+        <v-list-item title="Vehicle Occupancy"  :to="{ name: 'reports-vehicle-occupancy' }" value="reports-vehicle-occupancy" rounded="lg" prepend-icon="mdi-bus-clock" />
+        <v-list-item title="Driver Performance" :to="{ name: 'reports-driver-performance' }" value="reports-driver-performance" rounded="lg" prepend-icon="mdi-steering" />
+      </v-list-group>
+      <v-divider />
 
       <v-list-item @click="triggerLogout" prepend-icon="mdi-power" title="Sign Out" value="sign-out" />
       <v-divider />

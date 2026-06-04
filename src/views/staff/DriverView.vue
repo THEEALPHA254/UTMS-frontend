@@ -8,6 +8,15 @@
         <p class="text-body-2 text-medium-emphasis">Manage registered drivers</p>
       </div>
       <v-spacer />
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-download"
+        variant="tonal"
+        class="mr-3"
+        @click="exportCSV"
+      >
+        Export CSV
+      </v-btn>
 
       <CrudModal
         ref="crudModal"
@@ -29,8 +38,8 @@
     <v-card>
       <!-- Filters -->
       <v-card-text class="pb-0">
-        <v-row dense>
-          <v-col cols="12" md="5">
+        <v-row dense align="center">
+          <v-col cols="12" md="4">
             <v-text-field
               v-model="search"
               placeholder="Search by name or email..."
@@ -44,7 +53,7 @@
               @update:model-value="fetchDrivers"
             />
           </v-col>
-          <v-col cols="6" md="4">
+          <v-col cols="6" md="3">
             <v-select
               v-model="filterDuty"
               :items="dutyStatuses"
@@ -74,6 +83,11 @@
               class="app-field"
               @update:model-value="fetchDrivers"
             />
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex justify-end">
+            <v-btn variant="tonal" color="grey" size="small" prepend-icon="mdi-filter-off" rounded="lg" @click="resetFilters">
+              Reset
+            </v-btn>
           </v-col>
         </v-row>
       </v-card-text>
@@ -116,6 +130,16 @@
           </v-chip>
         </template>
 
+        <!-- Assigned Vehicle -->
+        <template #item.assigned_vehicle="{ item }">
+          <span v-if="item.assigned_vehicle">
+            <v-chip size="small" variant="tonal" color="teal" prepend-icon="mdi-bus">
+              {{ item.assigned_vehicle.plate_number }}
+            </v-chip>
+          </span>
+          <span v-else class="text-caption text-medium-emphasis">Unassigned</span>
+        </template>
+
         <!-- Active status chip -->
         <template #item.is_active="{ item }">
           <v-chip :color="item.is_active ? 'success' : 'error'" size="small" variant="tonal">
@@ -127,6 +151,9 @@
         <template #item.actions="{ item }">
           <v-btn icon size="small" variant="text" @click="openEdit(item)">
             <v-icon>mdi-pencil-outline</v-icon>
+          </v-btn>
+          <v-btn icon size="small" variant="text" :to="`/drivers/${item.profile_id}`">
+            <v-icon>mdi-eye-outline</v-icon>
           </v-btn>
           <v-btn icon size="small" variant="text" color="error" @click="confirmDelete(item)">
             <v-icon>mdi-delete-outline</v-icon>
@@ -198,13 +225,14 @@ const accountStatuses = [
 
 // ── Table headers ──────────────────────────────────────────
 const headers = [
-  { title: 'Driver',         key: 'name',           sortable: false },
-  { title: 'Phone',          key: 'phone_number',    sortable: false },
-  { title: 'License No.',    key: 'license_number',  sortable: false },
-  { title: 'License Expiry', key: 'license_expiry',  sortable: false },
-  { title: 'Duty Status',    key: 'is_on_duty',      sortable: false },
-  { title: 'Status',         key: 'is_active',       sortable: false },
-  { title: 'Actions',        key: 'actions',         sortable: false, align: 'end' },
+  { title: 'Driver',           key: 'name',             sortable: false },
+  { title: 'Phone',            key: 'phone_number',      sortable: false },
+  { title: 'License No.',      key: 'license_number',    sortable: false },
+  { title: 'License Expiry',   key: 'license_expiry',    sortable: false },
+  { title: 'Assigned Vehicle', key: 'assigned_vehicle',  sortable: false },
+  { title: 'Duty Status',      key: 'is_on_duty',        sortable: false },
+  { title: 'Status',           key: 'is_active',         sortable: false },
+  { title: 'Actions',          key: 'actions',           sortable: false, align: 'end' },
 ]
 
 // ── Driver form fields ─────────────────────────────────────
@@ -250,12 +278,13 @@ async function fetchDrivers() {
 
     drivers.value = (data.results || []).map(d => ({
       ...d,
-      first_name:     d.first_name || '',
-      last_name:      d.last_name  || '',
-      license_number: d.driver_profile?.license_number || '',
-      license_expiry: d.driver_profile?.license_expiry || '',
-      is_on_duty:     d.driver_profile?.is_on_duty     ?? false,
-      profile_id:     d.driver_profile?.id,
+      first_name:        d.first_name || '',
+      last_name:         d.last_name  || '',
+      license_number:    d.driver_profile?.license_number    || '',
+      license_expiry:    d.driver_profile?.license_expiry    || '',
+      is_on_duty:        d.driver_profile?.is_on_duty        ?? false,
+      profile_id:        d.driver_profile?.id,
+      assigned_vehicle:  d.driver_profile?.assigned_vehicle  || null,
     }))
 
     total.value = data.count || drivers.value.length
@@ -277,7 +306,12 @@ onMounted(fetchDrivers)
 // ── Open edit ──────────────────────────────────────────────
 function openEdit(item) {
   editingProfileId.value = item.profile_id
-  crudModal.value?.openEdit(item)
+  // Pre-populate the bus field with the currently assigned vehicle's id
+  const editItem = {
+    ...item,
+    bus: item.assigned_vehicle?.id ?? null,
+  }
+  crudModal.value?.openEdit(editItem)
 }
 
 function confirmDelete(item) {
@@ -325,6 +359,62 @@ async function onEditDriver({ data, callback }) {
     toast.error(e?.response?.data?.message || 'Failed to update driver.')
     callback()
   }
+}
+
+// ── Export CSV ─────────────────────────────────────────────
+async function exportCSV() {
+  loading.value = true
+  try {
+    const { data } = await axiosInst.get('/auth/drivers/', {
+      params: {
+        page_size:  1000,
+        search:     search.value || undefined,
+        is_active:  filterActive.value === '' ? undefined : filterActive.value,
+        is_on_duty: filterDuty.value    === '' ? undefined : filterDuty.value,
+      },
+    })
+    const rows = (data.results || []).map(d => ({
+      ...d,
+      license_number:   d.driver_profile?.license_number   || '',
+      license_expiry:   d.driver_profile?.license_expiry   || '',
+      is_on_duty:       d.driver_profile?.is_on_duty       ?? false,
+      assigned_vehicle: d.driver_profile?.assigned_vehicle?.plate_number || 'Unassigned',
+    }))
+    const headers = ['Name', 'Email', 'Phone', 'License No', 'License Expiry', 'Assigned Vehicle', 'Duty Status', 'Account Status']
+    const csvLines = [
+      headers.join(','),
+      ...rows.map(d => [
+        `${d.first_name} ${d.last_name}`,
+        d.email,
+        d.phone_number || '',
+        d.license_number,
+        d.license_expiry,
+        d.assigned_vehicle,
+        d.is_on_duty ? 'On Duty' : 'Off Duty',
+        d.is_active ? 'Active' : 'Inactive',
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    ]
+    const blob = new Blob([csvLines.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'drivers.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    toast.error('Export failed.')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ── Reset Filters ──────────────────────────────────────────
+function resetFilters() {
+  search.value = ''
+  filterDuty.value = ''
+  filterActive.value = ''
+  page.value = 1
+  fetchDrivers()
 }
 
 // ── Delete Driver ──────────────────────────────────────────
