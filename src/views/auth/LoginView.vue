@@ -8,17 +8,17 @@
 
         <!-- Brand -->
         <div class="auth-brand">
-          <span class="auth-brand-name">UNIVERSITY TRANSPORT MANAGEMENT SYSTEM</span>
+          <span class="auth-brand-name">UNIVERSITY STUDENTS' TRANSPORT MANAGEMENT SYSTEM</span>
         </div>
 
         <!-- Form Body -->
         <div class="auth-form-body">
           <div>
-            <h1 class="auth-title">Welcome back</h1>
-            <p class="auth-subtitle">Welcome back! Please enter your details.</p>
+            <h1 class="auth-title">Welcome to USTMS</h1>
+            <p class="auth-subtitle">Please enter your details to log in.</p>
           </div>
 
-          <div class="auth-login-fields">
+          <v-form ref="loginFormRef" class="auth-login-fields" @submit.prevent="onLogin">
             <!-- Email -->
             <v-text-field
               v-model="email"
@@ -29,6 +29,7 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
+              :rules="emailRules"
               :error-messages="errors.email"
             />
 
@@ -42,11 +43,11 @@
               variant="outlined"
               density="compact"
               hide-details="auto"
-              :error-messages="errors.password"
+              :rules="requiredRules"
               :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
               @click:append-inner="showPassword = !showPassword"
             />
-          </div>
+          </v-form>
 
           <!-- Remember + Forgot -->
           <div class="d-flex align-center justify-between">
@@ -60,18 +61,22 @@
             />
             <a href="#" class="link-primary" @click.prevent="forgotDialog = true">Forgot password</a>
           </div>
-
-          <!-- Sign In -->
+          
+          <div>
+            <!-- Sign In -->
           <v-btn
             class="btn-auth-primary"
             :loading="loading"
             block
             density="default"
-            height="38"
+            
             @click="onLogin"
           >
             Sign in
           </v-btn>
+          </div>
+
+          
         </div>
 
         <!-- Footer -->
@@ -80,6 +85,7 @@
 
       <!-- ── Right: Visual Panel ── -->
       <div class="auth-panel-visual">
+        
       </div>
 
     </div>
@@ -92,11 +98,12 @@
         {{ forgotStep === 1 ? 'Reset Password' : 'Set New Password' }}
       </v-card-title>
       <v-card-text class="pa-5 pt-2">
+        <v-form ref="forgotFormRef" @submit.prevent>
 
         <!-- Step 1: enter email -->
         <template v-if="forgotStep === 1">
           <p class="text-body-2 text-medium-emphasis mb-4">
-            Enter your registered email address and we'll send you a 6-digit reset code.
+            Enter your registered email address and we'll send you a 8-digit reset code.
           </p>
           <v-text-field
             v-model="forgotEmail"
@@ -106,6 +113,7 @@
             density="compact"
             rounded="lg"
             hide-details="auto"
+            :rules="emailRules"
             :error-messages="forgotError"
             class="auth-field"
           />
@@ -114,7 +122,7 @@
         <!-- Step 2: enter OTP + new password -->
         <template v-else>
           <p class="text-body-2 text-medium-emphasis mb-4">
-            Enter the 6-digit code sent to <strong>{{ forgotEmail }}</strong> and your new password.
+            Enter the 8-digit code sent to <strong>{{ forgotEmail }}</strong> and your new password.
           </p>
           <v-text-field
             v-model="forgotOtp"
@@ -124,6 +132,7 @@
             density="compact"
             rounded="lg"
             hide-details="auto"
+            :rules="requiredRules"
             :error-messages="forgotError"
             class="auth-field mb-3"
             maxlength="6"
@@ -136,12 +145,14 @@
             density="compact"
             rounded="lg"
             hide-details="auto"
+            :rules="passwordRules"
             class="auth-field"
             :append-inner-icon="forgotShowPw ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
             @click:append-inner="forgotShowPw = !forgotShowPw"
           />
         </template>
 
+        </v-form>
       </v-card-text>
       <v-card-actions class="pa-5 pt-0">
         <v-btn variant="text" @click="closeForgot">Cancel</v-btn>
@@ -188,15 +199,44 @@ const remember     = ref(false)
 const loading      = ref(false)
 const showPassword = ref(false)
 
-const errors = reactive({ email: '', password: '' })
+const errors = reactive({ email: '' })
 
-function validate() {
-  errors.email    = email.value    ? '' : 'Email is required.'
-  errors.password = password.value ? '' : 'Password is required.'
-  return !errors.email && !errors.password
-}
+const loginFormRef = ref(null)
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// ── Validation rules ───────────────────────────────────────────────────────
+const requiredRules = [
+  value => {
+    if (value) return true
+    return 'This field is required.'
+  },
+]
+
+const emailRules = [
+  value => {
+    if (value) return true
+    return 'Email is required.'
+  },
+  value => {
+    if (EMAIL_REGEX.test(value)) return true
+    return 'Please enter a valid email address.'
+  },
+]
+
+const passwordRules = [
+  value => {
+    if (value) return true
+    return 'Password is required.'
+  },
+  value => {
+    if (value.length >= 8) return true
+    return 'Password must be at least 8 characters.'
+  },
+]
 
 // ── Forgot password ────────────────────────────────────────────────────────
+const forgotFormRef     = ref(null)
 const forgotDialog      = ref(false)
 const forgotStep        = ref(1)
 const forgotEmail       = ref('')
@@ -218,7 +258,8 @@ function closeForgot() {
 
 async function requestOtp() {
   forgotError.value = ''
-  if (!forgotEmail.value) { forgotError.value = 'Email is required.'; return }
+  const { valid } = await forgotFormRef.value.validate()
+  if (!valid) return
   forgotLoading.value = true
   try {
     await axiosInst.post('/auth/forgot-password/', { email: forgotEmail.value })
@@ -232,8 +273,8 @@ async function requestOtp() {
 
 async function confirmReset() {
   forgotError.value = ''
-  if (!forgotOtp.value) { forgotError.value = 'Reset code is required.'; return }
-  if (forgotNewPassword.value.length < 8) { forgotError.value = 'Password must be at least 8 characters.'; return }
+  const { valid } = await forgotFormRef.value.validate()
+  if (!valid) return
   forgotLoading.value = true
   try {
     await axiosInst.post('/auth/reset-password/', {
@@ -252,7 +293,9 @@ async function confirmReset() {
 
 // ── Login ──────────────────────────────────────────────────────────────────
 const onLogin = async () => {
-  if (!validate()) return
+  errors.email = ''
+  const { valid } = await loginFormRef.value.validate()
+  if (!valid) return
 
   loading.value = true
   try {

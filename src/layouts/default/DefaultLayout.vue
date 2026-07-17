@@ -11,13 +11,13 @@
         </div>
       </template>
 
-      <v-divider class="my-5" />
+      <v-divider  />
       <Submenu />
     </v-navigation-drawer>
 
     <v-app-bar color="primary">
-      <v-app-bar-nav-icon @click="drawer = !drawer" />
-      <v-app-bar-title>UTMS</v-app-bar-title>
+      <v-app-bar-nav-icon color="bg" @click="drawer = !drawer" />
+      <v-app-bar-title>USTMS</v-app-bar-title>
     </v-app-bar>
 
     <v-main class="bg-background">
