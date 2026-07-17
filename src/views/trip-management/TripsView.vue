@@ -149,41 +149,43 @@
   async function fetchTrips() {
     loading.value = true
     try {
-      const { data } = await axiosInst.trips({
-        date: filterDate.value || undefined,
-        status: filterStatus.value || undefined,
+      const { data } = await axiosInst.get('/transport/trips/', {
+        params: {
+          date: filterDate.value || undefined,
+          status: filterStatus.value || undefined,
+        },
       })
       trips.value = data.results || data
     } finally { loading.value = false }
   }
-  
+
   async function updateStatus(trip, status) {
     updatingId.value = trip.id
     try {
-      await axiosInst.updateTripStatus(trip.id, status)
+      await axiosInst.patch(`/transport/trips/${trip.id}/update_status/`, { status })
       trip.status = status
       snack.value = { show: true, text: `Trip marked as ${status}.`, color: 'success' }
     } catch {
       snack.value = { show: true, text: 'Failed to update.', color: 'error' }
     } finally { updatingId.value = null }
   }
-  
+
   async function createTrip() {
     creating.value = true
     try {
-      await axiosInst.createTrip(newTrip.value)
+      await axiosInst.post('/transport/trips/', newTrip.value)
       snack.value = { show: true, text: 'Trip created.', color: 'success' }
       createDialog.value = false
       fetchTrips()
     } finally { creating.value = false }
   }
-  
+
   onMounted(async () => {
     fetchTrips()
-    const { data } = await axiosInst.schedules()
+    const { data } = await axiosInst.get('/transport/schedules/')
     schedules.value = (data.results || data).map(s => ({
       id: s.id,
-      label: `${s.route_detail?.origin} → ${s.route_detail?.destination} | ${s.get_day_of_week_display || s.day_of_week} ${s.departure_time}`,
+      label: `${s.route_detail?.origin} → ${s.route_detail?.destination} | ${s.day_label || s.day_of_week} ${s.departure_time}`,
     }))
   })
   </script>

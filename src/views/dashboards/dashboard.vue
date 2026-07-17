@@ -34,7 +34,7 @@
           <v-card rounded="xl">
             <v-card-title class="pa-5 pb-2 font-weight-bold">Revenue (Last 30 Days)</v-card-title>
             <v-card-text>
-              <Bar v-if="revenueData" :data="revenueData" :options="chartOptions" height="80" />
+              <Bar v-if="revenueData" :data="revenueData" :options="chartOptions" />
               <v-skeleton-loader v-else type="image" />
             </v-card-text>
           </v-card>
@@ -99,8 +99,8 @@
     return [
       { title: 'Total Students', value: s.students.total, sub: `${s.students.active} active`, icon: 'mdi-account-group', color: 'primary', bg: 'primary' },
       { title: 'Monthly Revenue', value: `KES ${Number(s.revenue.this_month).toLocaleString()}`, sub: 'This month', icon: 'mdi-cash-multiple', color: 'success', bg: 'success' },
-      { title: "Today's Trips", value: s.trips.today_total, sub: `${s.trips.today_completed} completed`, icon: 'mdi-bus-clock', color: 'warning', bg: 'warning' },
-      { title: "Today's Bookings", value: s.bookings_today, sub: 'Confirmed', icon: 'mdi-ticket-confirmation', color: 'secondary', bg: 'secondary' },
+      { title: "Today's Trips", value: s.trips.today, sub: `${s.trips.today_completed} completed`, icon: 'mdi-bus-clock', color: 'warning', bg: 'warning' },
+      { title: "Today's Bookings", value: s.bookings.today, sub: 'Confirmed', icon: 'mdi-ticket-confirmation', color: 'secondary', bg: 'secondary' },
     ]
   })
   
@@ -122,30 +122,20 @@
     return { confirmed: 'success', pending: 'warning', cancelled: 'error', completed: 'primary' }[s] || 'grey'
   }
 
-  const reportsApi = {
-    dashboard: () => api.get('/reports/dashboard'),
-    revenueDaily: (days = 30) => api.get(`/reports/revenue-daily?days=${days}`),
-    routePopularity: () => api.get('/reports/route-popularity'),
-  }
-
-  const transportApi = {
-    allBookings: ({ page_size = 8 } = {}) => api.get(`/transport/bookings?page_size=${page_size}`),
-  }
-  
   onMounted(async () => {
     const [sumRes, revRes, routeRes, bookRes] = await Promise.allSettled([
-      reportsApi.dashboard(),
-      reportsApi.revenueDaily(30),
-      reportsApi.routePopularity(),
-      transportApi.allBookings({ page_size: 8 }),
+      axiosInst.get('/reports/dashboard/'),
+      axiosInst.get('/reports/revenue/'),
+      axiosInst.get('/reports/trips/'),
+      axiosInst.get('/transport/bookings/all/?page_size=8'),
     ])
-  
+
     if (sumRes.status === 'fulfilled') summary.value = sumRes.value.data
-  
+
     if (revRes.status === 'fulfilled') {
-      const raw = revRes.value.data
+      const raw = revRes.value.data.months || []
       revenueData.value = {
-        labels: raw.map(d => d.day),
+        labels: raw.map(d => d.month),
         datasets: [{
           label: 'Revenue (KES)',
           data: raw.map(d => d.total),
@@ -154,19 +144,19 @@
         }],
       }
     }
-  
+
     if (routeRes.status === 'fulfilled') {
-      const raw = routeRes.value.data.slice(0, 6)
+      const raw = (routeRes.value.data.popular_routes_this_month || []).slice(0, 6)
       const palette = ['#1565C0','#0288D1','#FF6F00','#2E7D32','#C62828','#6A1B9A']
       routeData.value = {
-        labels: raw.map(d => d['trip__schedule__route__name']),
+        labels: raw.map(d => `${d['trip__schedule__route__origin']} → ${d['trip__schedule__route__destination']}`),
         datasets: [{
-          data: raw.map(d => d.booking_count),
+          data: raw.map(d => d.bookings),
           backgroundColor: palette,
         }],
       }
     }
-  
+
     if (bookRes.status === 'fulfilled') {
       recentBookings.value = bookRes.value.data.results || bookRes.value.data
     }

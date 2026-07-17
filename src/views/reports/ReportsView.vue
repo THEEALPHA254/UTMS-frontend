@@ -121,51 +121,51 @@
   }
   
   const routeHeaders = [
-    { title: 'Route', key: 'trip__schedule__route__name' },
-    { title: 'Bookings', key: 'booking_count' },
-    { title: 'Revenue', key: 'revenue' },
+    { title: 'Origin', key: 'trip__schedule__route__origin' },
+    { title: 'Destination', key: 'trip__schedule__route__destination' },
+    { title: 'Bookings', key: 'bookings' },
   ]
   const studentHeaders = [
-    { title: 'Student', key: 'name' },
-    { title: 'Admission', key: 'admission_number' },
-    { title: 'Trips', key: 'total_bookings' },
-    { title: 'Spent', key: 'total_spent' },
+    { title: 'First Name', key: 'student__first_name' },
+    { title: 'Last Name', key: 'student__last_name' },
+    { title: 'Admission', key: 'student__student_profile__admission_number' },
+    { title: 'Trips', key: 'trips' },
   ]
-  
+
+  const apiBase = import.meta.env.VITE_BASE_API_URL || 'http://127.0.0.1:8000/api'
+
   function exportStudents() {
-    window.open('/api/reports/students/usage/?export=csv', '_blank')
+    window.open(`${apiBase}/reports/students/?export=csv`, '_blank')
   }
   function exportPayments() {
     const params = new URLSearchParams({ export: 'csv' })
     if (dateFrom.value) params.set('from', dateFrom.value)
     if (dateTo.value) params.set('to', dateTo.value)
-    window.open(`/api/reports/payments/?${params}`, '_blank')
+    window.open(`${apiBase}/reports/revenue/?${params}`, '_blank')
   }
-  
+
   onMounted(async () => {
     loading.value = true
-    const [monthly, routes, students] = await Promise.allSettled([
-      axiosInst.revenueMonthly(),
-      axiosInst.routePopularity(),
-      axiosInst.studentUsage({ page_size: 10 }),
+    const [monthly, trips, students] = await Promise.allSettled([
+      axiosInst.get('/reports/revenue/'),
+      axiosInst.get('/reports/trips/'),
+      axiosInst.get('/reports/students/'),
     ])
-  
+
     if (monthly.status === 'fulfilled') {
-      const rev = monthly.value.data.revenue
-      const book = monthly.value.data.bookings
-      const months = rev.map(d => new Date(d.month).toLocaleDateString('en', { month: 'short', year: '2-digit' }))
+      const months_data = monthly.value.data.months || []
       monthlyRevChart.value = {
-        labels: months,
-        datasets: [{ label: 'Revenue (KES)', data: rev.map(d => d.total), borderColor: '#1565C0', backgroundColor: 'rgba(21,101,192,0.1)', fill: true, tension: 0.4 }],
+        labels: months_data.map(d => d.month),
+        datasets: [{ label: 'Revenue (KES)', data: months_data.map(d => d.trip_revenue), borderColor: '#1565C0', backgroundColor: 'rgba(21,101,192,0.1)', fill: true, tension: 0.4 }],
       }
       monthlyBookChart.value = {
-        labels: book.map(d => new Date(d.month).toLocaleDateString('en', { month: 'short', year: '2-digit' })),
-        datasets: [{ label: 'Bookings', data: book.map(d => d.count), backgroundColor: '#FF6F00', borderRadius: 6 }],
+        labels: months_data.map(d => d.month),
+        datasets: [{ label: 'Wallet Top-Ups (KES)', data: months_data.map(d => d.wallet_topups), backgroundColor: '#FF6F00', borderRadius: 6 }],
       }
     }
-    if (routes.status === 'fulfilled') routeStats.value = routes.value.data
-    if (students.status === 'fulfilled') topStudents.value = (students.value.data.results || students.value.data).slice(0, 8)
-  
+    if (trips.status === 'fulfilled') routeStats.value = trips.value.data.popular_routes_this_month || []
+    if (students.status === 'fulfilled') topStudents.value = (students.value.data.top_users || []).slice(0, 8)
+
     loading.value = false
   })
   </script>

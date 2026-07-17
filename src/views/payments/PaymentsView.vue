@@ -11,12 +11,15 @@
   
       <v-card rounded="xl">
         <v-card-text class="pb-0">
-          <v-row dense>
+          <v-row dense align="center">
             <v-col cols="6" md="3">
-              <v-select v-model="filterMethod" :items="['', 'mpesa', 'card', 'wallet']" label="Method" variant="outlined" density="compact" rounded="lg" hide-details clearable @update:model-value="fetch" />
+              <v-select v-model="filterMethod" :items="['', 'mpesa', 'wallet']" label="Method" variant="outlined" density="compact" rounded="lg" hide-details clearable @update:model-value="fetch" />
             </v-col>
             <v-col cols="6" md="3">
               <v-select v-model="filterStatus" :items="['', 'success', 'pending', 'failed']" label="Status" variant="outlined" density="compact" rounded="lg" hide-details clearable @update:model-value="fetch" />
+            </v-col>
+            <v-col cols="12" md="2">
+              <v-btn variant="tonal" color="grey" size="small" prepend-icon="mdi-filter-off" rounded="lg" @click="resetFilters">Reset</v-btn>
             </v-col>
           </v-row>
         </v-card-text>
@@ -52,29 +55,56 @@
   const filterStatus = ref('')
   
   const headers = [
-    { title: 'Reference', key: 'reference' },
-    { title: 'Student', key: 'user' },
-    { title: 'Method', key: 'payment_method' },
-    { title: 'Type', key: 'transaction_type' },
-    { title: 'Amount', key: 'amount' },
-    { title: 'Status', key: 'status' },
-    { title: 'Date', key: 'created_at' },
+    { title: 'Reference',    key: 'reference' },
+    { title: 'Admission No', key: 'student_admission', sortable: false },
+    { title: 'Student',      key: 'student_name',      sortable: false },
+    { title: 'Method',       key: 'payment_method' },
+    { title: 'Type',         key: 'transaction_type' },
+    { title: 'Amount',       key: 'amount' },
+    { title: 'Status',       key: 'status' },
+    { title: 'Date',         key: 'created_at' },
   ]
-  
+
+  function buildParams() {
+    return {
+      page:           page.value,
+      page_size:      perPage.value,
+      payment_method: filterMethod.value || undefined,
+      status:         filterStatus.value || undefined,
+    }
+  }
+
   async function fetch() {
     loading.value = true
     try {
-      const { data } = await axiosInst.all({
-        page: page.value, page_size: perPage.value,
-        payment_method: filterMethod.value || undefined,
-        status: filterStatus.value || undefined,
-      })
+      const { data } = await axiosInst.get('/payments/all/', { params: buildParams() })
       transactions.value = data.results || data
       total.value = data.count || transactions.value.length
     } finally { loading.value = false }
   }
-  
+
   function onOptions({ page: p, itemsPerPage: pp }) { page.value = p; perPage.value = pp; fetch() }
-  function exportCSV() { window.open('/api/reports/payments/?export=csv', '_blank') }
+
+  async function exportCSV() {
+    try {
+      const resp = await axiosInst.get('/payments/all/', { params: { ...buildParams(), export: 'csv', page_size: 10000 }, responseType: 'blob' })
+      const blob = new Blob([resp.data], { type: 'text/csv' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = 'payments.csv'
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch {
+      console.error('Export failed')
+    }
+  }
+
+  function resetFilters() {
+    filterMethod.value = ''
+    filterStatus.value = ''
+    page.value = 1
+    fetch()
+  }
+
   onMounted(fetch)
   </script>

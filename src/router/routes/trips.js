@@ -1,12 +1,29 @@
 import Bookings from "@/views/trip-management/BookingView.vue"
+import Buses from "@/views/trip-management/BusesView.vue"
 import Routes from "@/views/trip-management/RoutesView.vue"
+import Schedules from "@/views/trip-management/SchedulesView.vue"
 import Trips from "@/views/trip-management/TripsView.vue"
 
 
 export default [
 
 
-    // Trip View 
+    {
+        path: "/buses",
+        name: "buses",
+        component: Buses,
+        meta: {
+            requiresAuth: true,
+            title: "Buses",
+            breadCrumb: [
+                {
+                    text: "Buses", to: { name: "buses" },
+                    active: true,
+                },
+            ],
+        },
+    },
+
     {
         path: "/bookings",
         name: "bookings",
@@ -46,9 +63,25 @@ export default [
         meta: {
             requiresAuth: true,
             title: "Trips",
-            breadCrumb: [                
+            breadCrumb: [
                 {
                     text: "Trips", to: { name: "trips" },
+                    active: true,
+                },
+            ],
+        },
+    },
+
+    {
+        path: "/schedules",
+        name: "schedules",
+        component: Schedules,
+        meta: {
+            requiresAuth: true,
+            title: "Schedules",
+            breadCrumb: [
+                {
+                    text: "Schedules", to: { name: "schedules" },
                     active: true,
                 },
             ],

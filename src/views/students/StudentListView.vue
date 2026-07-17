@@ -1,3 +1,4 @@
+<!-- students.vue -->
 <template>
   <div>
     <!-- Page Header -->
@@ -38,8 +39,8 @@
     <v-card>
       <!-- Filters -->
       <v-card-text class="pb-0">
-        <v-row dense>
-          <v-col cols="12" md="5">
+        <v-row dense align="center">
+          <v-col cols="12" md="4">
             <v-text-field
               v-model="search"
               placeholder="Search...."
@@ -53,7 +54,7 @@
               @update:model-value="fetchStudents"
             />
           </v-col>
-          <v-col cols="6" md="4">
+          <v-col cols="6" md="3">
             <v-select
               v-model="filterStatus"
               :items="transportStatuses"
@@ -79,6 +80,18 @@
               class="app-field"
               @update:model-value="fetchStudents"
             />
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex justify-end">
+            <v-btn
+              variant="tonal"
+              color="grey"
+              size="small"
+              prepend-icon="mdi-filter-off"
+              rounded="lg"
+              @click="resetFilters"
+            >
+              Reset
+            </v-btn>
           </v-col>
         </v-row>
       </v-card-text>
@@ -117,17 +130,17 @@
         <!-- Transport Status chip -->
         <template #item.transport_status="{ item }">
           <v-chip
-            :color="tsColor(item.GlobalComponentstransport_status)"
+            :color="tsColor(item.student_profile?.transport_status)"
             size="small"
             variant="tonal"
           >
-            {{ item.transport_status || '—' }}
+            {{ item.student_profile?.transport_status || '—' }}
           </v-chip>
         </template>
 
         <!-- Wallet -->
         <template #item.wallet_balance="{ item }">
-          KES {{ Number(item.wallet_balance || 0).toLocaleString() }}
+          KES {{ (item.student_profile?.wallet_balance ?? 0).toLocaleString() }}
         </template>
 
         <!-- Actions -->
@@ -137,7 +150,7 @@
             <v-icon>mdi-pencil-outline</v-icon>
           </v-btn>
           <!-- View detail -->
-          <v-btn icon size="small" variant="text" :to="`/students/${item.id}`">
+          <v-btn icon size="small" variant="text" :to="`/students/${item.profile_id}`">
             <v-icon>mdi-eye-outline</v-icon>
           </v-btn>
         </template>
@@ -189,6 +202,7 @@
 import { ref, onMounted } from 'vue'
 import CrudModal from '@/components/CRUD.vue'
 import axiosInst from '@/services/api'
+import { toast } from 'vue3-toastify'
 
 // ── Table state ────────────────────────────────────────────
 const students    = ref([])
@@ -218,47 +232,24 @@ const accountStatuses   = [
 
 // ── Table headers ──────────────────────────────────────────
 const headers = [
-  { title: 'Student',      key: 'name', sortable: false },
+  { title: 'Student', key: 'name', sortable: false },
   { title: 'Admission No', key: 'admission_number' },
-  { title: 'Faculty',      key: 'faculty' },
-  { title: 'Transport',    key: 'transport_status' },
-  { title: 'Wallet',       key: 'wallet_balance' },
-  { title: 'Actions',      key: 'actions', sortable: false, align: 'end' },
+  { title: 'Faculty', key: 'faculty' },
+  { title: 'Transport', key: 'transport_status' },
+  { title: 'Wallet', key: 'wallet_balance' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]
 
 // ── Student form fields passed to GlobalCrudModal ──────────
 // Each field: { value, text, type, required, cols?, select_list? }
 const studentFields = [
-  { value: 'first_name',  text: 'First Name',      type: 'text',   required: true },
-  { value: 'last_name',   text: 'Last Name',        type: 'text',   required: true },
-  { value: 'email',       text: 'Email',            type: 'email',  required: true,  cols: 12 },
-  { value: 'phone',       text: 'Phone Number',     type: 'text',   required: false },
-  {
-    value: 'admission_number',
-    text: 'Admission No',
-    type: 'text',
-    required: true,
-  },
-  {
-    value: 'student_id',
-    text: 'Stuedent Id',
-    type: 'text',
-    required: true,
-  },
-  {
-    value: 'faculty',
-    text: 'Faculty',
-    type: 'text',
-    required: false,
-  },
-  {
-    value: 'transport_status',
-    text: 'Transport Status',
-    type: 'select',
-    required: true,
-    cols: 12,
-    select_list: transportStatuses,
-  },
+  { value: 'first_name',  text: 'First Name', type: 'text',   required: true },
+  { value: 'last_name', text: 'Last Name', type: 'text',   required: true },
+  { value: 'email', text: 'Email', type: 'email',  required: true,  cols: 12 },
+  { value: 'phone_number', text: 'Phone Number', type: 'text',   required: false },
+  { value: 'admission_number', text: 'Admission No', type: 'text', required: true, },
+  { value: 'faculty', text: 'Faculty', type: 'text', required: false,},
+  {value: 'transport_status', text: 'Transport Status', type: 'select', required: true, cols: 12, select_list: transportStatuses,},
 ]
 
 // ── Helpers ────────────────────────────────────────────────
@@ -270,9 +261,13 @@ function showSnack(text, color = 'success') {
   snack.value = { show: true, text, color }
 }
 
+const editingProfileId = ref(null)
 // ── Open edit via crudModal ref ────────────────────────────
 function openEdit(item) {
+  editingProfileId.value = item.profile_id
+  console.log(item.profile_id)
   crudModal.value?.openEdit(item)
+  
 }
 
 
@@ -293,10 +288,13 @@ async function fetchStudents() {
     // ✅ Map to flatten user fields onto each student object
     students.value = (data.results || []).map(student => ({
       ...student,
-      first_name: student.user?.first_name || '',
-      last_name:  student.user?.last_name  || '',
-      // email:      student.user?.email      || '',
-      is_active:  student.user?.is_active  ?? true,
+      first_name:       student.first_name || '',
+      last_name:        student.last_name  || '',
+      admission_number: student.student_profile?.admission_number || '',
+      faculty:          student.student_profile?.faculty          || '',
+      transport_status: student.student_profile?.transport_status || '',
+      profile_id:       student.student_profile?.id,
+      is_active:        student.is_active,
     }))
 
     total.value = data.count || students.value.length
@@ -332,13 +330,14 @@ async function onAddStudent({ data, callback }) {
 
 // ── Edit Student ───────────────────────────────────────────
 async function onEditStudent({ data, id, callback }) {
+
   try {
-    await axiosInst.patch(`/students/${id}/`, data)
-    showSnack('Student updated successfully.')
+    await axiosInst.put(`/auth/students/${editingProfileId.value}/`, data)
+    toast.success('Student updated successfully.')
     fetchStudents()
     callback()
   } catch (e) {
-    showSnack(e?.response?.data?.detail || 'Failed to update student.', 'error')
+    toast.error(e?.response?.data?.detail || 'Failed to update student.')
     callback()
   }
 }
@@ -353,7 +352,7 @@ function openStatusDialog(student) {
 async function saveStatus() {
   saving.value = true
   try {
-    await axiosInst.patch(`/student-profiles/${selectedStudent.value.student_profile.id}/`, {
+    await axiosInst.put(`/auth/students/${selectedStudent.value.student_profile.id}/`, {
       transport_status: newStatus.value,
     })
     showSnack('Status updated.')
@@ -367,7 +366,54 @@ async function saveStatus() {
 }
 
 async function exportCSV() {
-  window.open('/api/reports/students/usage/?export=csv', '_blank')
+  loading.value = true
+  try {
+    // Fetch ALL matching students (no pagination) for export
+    const { data } = await axiosInst.get('/auth/students/', {
+      params: {
+        page_size:        1000,
+        search:           search.value || undefined,
+        transport_status: filterStatus.value || undefined,
+        is_active:        filterActive.value === '' ? undefined : filterActive.value,
+      },
+    })
+    const rows = data.results || []
+    const headers = ['Admission No', 'First Name', 'Last Name', 'Email', 'Phone', 'Faculty', 'Transport Status', 'Wallet Balance (KES)', 'Account Status', 'Date Joined']
+    const csvLines = [
+      headers.join(','),
+      ...rows.map(s => [
+        s.student_profile?.admission_number || '',
+        s.first_name || '',
+        s.last_name || '',
+        s.email || '',
+        s.phone_number || '',
+        s.student_profile?.faculty || '',
+        s.student_profile?.transport_status || '',
+        s.student_profile?.wallet_balance ?? 0,
+        s.is_active ? 'Active' : 'Inactive',
+        s.date_joined ? new Date(s.date_joined).toLocaleDateString() : '',
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    ]
+    const blob = new Blob([csvLines.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'students.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    showSnack('Export failed.', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+function resetFilters() {
+  search.value = ''
+  filterStatus.value = ''
+  filterActive.value = ''
+  page.value = 1
+  fetchStudents()
 }
 
 onMounted(fetchStudents)
