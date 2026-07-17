@@ -34,7 +34,7 @@
           <v-card rounded="xl">
             <v-card-title class="pa-5 pb-2 font-weight-bold">Revenue (Last 30 Days)</v-card-title>
             <v-card-text>
-              <Bar v-if="revenueData" :data="revenueData" :options="chartOptions" height="80" />
+              <Bar v-if="revenueData" :data="revenueData" :options="chartOptions" />
               <v-skeleton-loader v-else type="image" />
             </v-card-text>
           </v-card>

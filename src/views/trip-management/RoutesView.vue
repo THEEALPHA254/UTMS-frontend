@@ -48,13 +48,16 @@
         </v-row>
       </v-card-text>
 
-      <v-data-table
+      <v-data-table-server
+        v-model:items-per-page="perPage"
         :headers="headers"
         :items="routes"
+        :items-length="total"
         :loading="loading"
-        :search="search"
+        :page="page"
         hover
         class="mt-2"
+        @update:options="onTableOptions"
       >
         <!-- Fare -->
         <template #item.fare="{ item }">
@@ -101,7 +104,7 @@
             <v-icon>mdi-delete-outline</v-icon>
           </v-btn>
         </template>
-      </v-data-table>
+      </v-data-table-server>
     </v-card>
 
     <!-- Create / Edit Dialog -->
@@ -341,7 +344,10 @@ import axiosInst from '@/services/api'
 
 // ── Table state ────────────────────────────────────────────
 const routes       = ref([])
+const total        = ref(0)
 const loading      = ref(false)
+const page         = ref(1)
+const perPage      = ref(15)
 const search       = ref('')
 const filterActive = ref('')
 
@@ -419,17 +425,27 @@ function viewStops(item) {
 async function fetchRoutes() {
   loading.value = true
   try {
-    const params = {
-      search:    search.value || undefined,
-      is_active: filterActive.value === '' ? undefined : filterActive.value,
-    }
-    const { data } = await axiosInst.get('/transport/routes/', { params })
+    const { data } = await axiosInst.get('/transport/routes/', {
+      params: {
+        page:      page.value,
+        page_size: perPage.value,
+        search:    search.value || undefined,
+        is_active: filterActive.value === '' ? undefined : filterActive.value,
+      },
+    })
     routes.value = data.results || data
+    total.value  = data.count   || routes.value.length
   } catch {
     showSnack('Failed to load routes.', 'error')
   } finally {
     loading.value = false
   }
+}
+
+function onTableOptions({ page: p, itemsPerPage: pp }) {
+  page.value    = p
+  perPage.value = pp
+  fetchRoutes()
 }
 
 // ── Open create / edit ─────────────────────────────────────
